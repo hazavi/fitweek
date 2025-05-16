@@ -2,8 +2,15 @@ import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-// Notice we're receiving the logout prop directly now
+/**
+ * SettingsScreen - Displays user settings and logout options
+ * Contains different configuration options and account management
+ */
 const SettingsScreen = ({ logout }) => {
+  /**
+   * Handle user logout
+   * Calls the logout function passed from RootNavigator
+   */
   const handleLogout = async () => {
     try {
       // Call the logout function passed from RootNavigator
@@ -27,10 +34,17 @@ const SettingsScreen = ({ logout }) => {
           <Text style={styles.menuText}>Profile</Text>
         </TouchableOpacity>
 
-        {/* Themes Option */}
-        <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Themes', 'Theme settings coming soon!')}>
+        {/* Themes Option - Toggle between light and dark mode */}
+        <TouchableOpacity 
+          style={styles.menuItem} 
+          onPress={() => Alert.alert('Themes', 'Theme settings coming soon!')}
+        >
           <Ionicons name="contrast-outline" size={24} color="black" />
           <Text style={styles.menuText}>Themes</Text>
+          <View style={styles.themeSelectionContainer}>
+            <Text style={styles.themeValueText}>Light</Text>
+            <Ionicons name="chevron-forward" size={20} color="#888" />
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -47,6 +61,7 @@ const SettingsScreen = ({ logout }) => {
 };
 
 export default SettingsScreen;
+
 
 const styles = StyleSheet.create({
   container: {
@@ -72,6 +87,17 @@ const styles = StyleSheet.create({
   menuText: {
     fontSize: 18,
     marginLeft: 15,
+    flex: 1,
+  },
+  // New styles for theme selection UI
+  themeSelectionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  themeValueText: {
+    fontSize: 16,
+    color: '#888',
+    marginRight: 5,
   },
   logoutButton: {
     position: 'absolute',

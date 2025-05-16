@@ -2,24 +2,32 @@ import React from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity, SafeAreaView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
+/**
+ * WelcomeScreen - The initial landing page for the app
+ * Shows app branding and login/signup options
+ */
 const WelcomeScreen = () => {
   const navigation = useNavigation();
   
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
+        {/* App logo/illustration */}
         <Image 
           source={require('../assets/workout-illustration.png')} 
           style={styles.image}
           resizeMode="contain"
         />
         
+        {/* App name */}
         <View style={styles.textContainer}>
           <Text style={styles.title}>Welcome to</Text>
           <Text style={styles.titleBold}>FitWeek</Text>
         </View>
 
+        {/* Authentication buttons */}
         <View style={styles.buttonContainer}>
+          {/* Login button */}
           <TouchableOpacity 
             style={styles.loginButton}
             onPress={() => navigation.navigate('Login')}
@@ -27,6 +35,7 @@ const WelcomeScreen = () => {
             <Text style={styles.loginText}>Login</Text>
           </TouchableOpacity>
           
+          {/* Sign up button */}
           <TouchableOpacity 
             style={styles.signupButton}
             onPress={() => navigation.navigate('SignUp')}
@@ -40,6 +49,7 @@ const WelcomeScreen = () => {
 };
 
 export default WelcomeScreen;
+
 
 const styles = StyleSheet.create({
   container: {

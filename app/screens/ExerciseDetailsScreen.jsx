@@ -1,27 +1,40 @@
 import React, { useEffect, useState } from 'react';
 import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  ScrollView, 
-  Image, 
-  TouchableOpacity, 
-  ActivityIndicator 
+  StyleSheet, Text, View, ScrollView, Image, 
+  TouchableOpacity, ActivityIndicator 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { exerciseService } from '../services/exerciseService';
 
+/**
+ * ExerciseDetailsScreen - Shows detailed information about a specific exercise
+ * Displays name, image, category, instructions, and tips
+ */
 const ExerciseDetailsScreen = ({ route, navigation }) => {
-  const { exercise: initialExercise } = route.params;
-  const [exercise, setExercise] = useState(initialExercise);
+  // Get exercise details from navigation params
+  const { exercise: initialExercise, exerciseId } = route.params;
+  
+  // State variables
+  const [exercise, setExercise] = useState(initialExercise || null);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
 
+  /**
+   * Fetch complete exercise details when component mounts
+   */
   useEffect(() => {
     const fetchExerciseDetails = async () => {
       try {
-        // Fetch the complete exercise details
-        const fullExercise = await exerciseService.getExerciseById(initialExercise.$id);
+        // Determine which ID to use
+        let id = initialExercise?.$id || exerciseId;
+        if (!id) {
+          console.error('No exercise ID provided');
+          setLoading(false);
+          return;
+        }
+
+        // Fetch the complete exercise details from the API
+        const fullExercise = await exerciseService.getExerciseById(id);
         setExercise(fullExercise);
       } catch (error) {
         console.error('Failed to fetch exercise details:', error);
@@ -31,8 +44,9 @@ const ExerciseDetailsScreen = ({ route, navigation }) => {
     };
 
     fetchExerciseDetails();
-  }, [initialExercise.$id]);
+  }, [initialExercise?.$id, exerciseId]);
 
+  // Show loading spinner while fetching data
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -41,6 +55,24 @@ const ExerciseDetailsScreen = ({ route, navigation }) => {
     );
   }
 
+  // Show error message if exercise not found
+  if (!exercise) {
+    return (
+      <View style={styles.container}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="chevron-back" size={24} color="#000" />
+          <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+        <View style={styles.loadingContainer}>
+          <Text>Exercise not found</Text>
+        </View>
+      </View>
+    );
+  }
+  
   return (
     <View style={styles.container}>
       {/* Back button */}
@@ -60,46 +92,56 @@ const ExerciseDetailsScreen = ({ route, navigation }) => {
         {/* Exercise title */}
         <Text style={styles.title}>{exercise.name}</Text>
         
-        {/* Exercise thumbnail */}
+        {/* Exercise image */}
         <View style={styles.imageContainer}>
-            <Image
-                source={{ 
-                uri: !imageError && exercise.thumbnail 
-                    ? exerciseService.getThumbnailUrl(exercise.thumbnail)
-                    : 'https://icons.iconarchive.com/icons/icons8/ios7/512/Sports-Dumbbell-icon.png'
-                }}
-                style={styles.image}
-                resizeMode="contain"
-                onError={() => {
-                console.error('Image failed to load:', exercise.thumbnail);
-                setImageError(true);
-                }}
-                onLoad={() => console.log('Image loaded successfully')}
-            />
+          <Image
+            source={{ 
+              uri: !imageError && exercise.thumbnail 
+                ? exerciseService.getThumbnailUrl(exercise.thumbnail)
+                : 'https://icons.iconarchive.com/icons/icons8/ios7/512/Sports-Dumbbell-icon.png'
+            }}
+            style={styles.image}
+            resizeMode="contain"
+            onError={() => {
+              console.error('Image failed to load:', exercise.thumbnail);
+              setImageError(true);
+            }}
+          />
         </View>
         
         {/* Category and body part tags */}
         <View style={styles.tagsContainer}>
-          <View style={styles.tag}>
-            <Text style={styles.tagText}>{exercise.category}</Text>
-          </View>
-          <View style={styles.tag}>
-            <Text style={styles.tagText}>{exercise.bodyPart}</Text>
-          </View>
+          {exercise.bodyPart && (
+            <View style={styles.tag}>
+              <Text style={styles.tagText}>{exercise.bodyPart}</Text>
+            </View>
+          )}
+          {exercise.category && (
+            <View style={styles.tag}>
+              <Text style={styles.tagText}>{exercise.category}</Text>
+            </View>
+          )}
         </View>
         
         {/* Instructions section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Instructions</Text>
-          <View style={styles.instructionsContainer}>
-            {exercise.instructions.split('\n').map((instruction, index) => (
-              <View key={index} style={styles.instructionItem}>
-                <Text style={styles.bulletPoint}>•</Text>
-                <Text style={styles.instructionText}>{instruction.trim()}</Text>
-              </View>
-            ))}
+        {exercise.instructions ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Instructions</Text>
+            <View style={styles.instructionsContainer}>
+              {exercise.instructions.split('\n').map((instruction, index) => (
+                <View key={index} style={styles.instructionItem}>
+                  <Text style={styles.bulletPoint}>•</Text>
+                  <Text style={styles.instructionText}>{instruction.trim()}</Text>
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
+        ) : (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Instructions</Text>
+            <Text style={styles.noContentText}>No instructions available</Text>
+          </View>
+        )}
         
         {/* Tips section */}
         {exercise.tips && (
@@ -110,13 +152,13 @@ const ExerciseDetailsScreen = ({ route, navigation }) => {
             </View>
           </View>
         )}
-
       </ScrollView>
     </View>
   );
 };
 
 export default ExerciseDetailsScreen;
+
 
 const styles = StyleSheet.create({
   container: {
@@ -224,5 +266,9 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: '#333',
   },
-
+  noContentText: {
+    fontSize: 15,
+    color: '#888',
+    fontStyle: 'italic'
+  },
 });

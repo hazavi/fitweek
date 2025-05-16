@@ -3,28 +3,37 @@ import { StyleSheet, View, Text, TextInput, TouchableOpacity, SafeAreaView, Acti
 import { useNavigation } from '@react-navigation/native';
 import { account, ID } from '../config/appwrite';
 import { AuthContext } from '../index';
-import { Ionicons } from '@expo/vector-icons'; // Import Ionicons for the eye icon
+import { Ionicons } from '@expo/vector-icons';
 
+/**
+ * SignUpScreen - Allows new users to create an account
+ * Collects name, email, and password
+ */
 const SignUpScreen = () => {
+  // State variables to manage form inputs and UI state
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // New state for password visibility
+  const [showPassword, setShowPassword] = useState(false); // Controls password visibility
+  
   const navigation = useNavigation();
   const { refreshAuth } = useContext(AuthContext);
   
-  // Toggle password visibility
+  // Toggle password visibility (show/hide)
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
   
+  // Handle the sign up action
   const handleSignUp = async () => {
+    // Validate all fields are filled
     if (!name || !email || !password) {
       alert('Please fill in all fields');
       return;
     }
     
+    // Check password meets minimum requirements
     if (password.length < 8) {
       alert('Password must be at least 8 characters');
       return;
@@ -35,9 +44,9 @@ const SignUpScreen = () => {
     try {
       console.log("Creating user account...");
       
-      // Create user account
+      // Create user account using Appwrite
       const user = await account.create(
-        ID.unique(),
+        ID.unique(),  // Generate a unique ID
         email,
         password,
         name
@@ -63,10 +72,11 @@ const SignUpScreen = () => {
       setPassword('');
       
     } catch (error) {
+      // Handle any errors during sign up
       console.error('Sign up error', error);
       Alert.alert('Sign Up Failed', error.message || 'Unknown error occurred');
     } finally {
-      setLoading(false);
+      setLoading(false);  // Always stop loading indicator
     }
   };
 
@@ -108,14 +118,14 @@ const SignUpScreen = () => {
           />
         </View>
 
-        {/* Password input field */}
+        {/* Password input field with toggle visibility */}
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Password</Text>
           <View style={styles.passwordContainer}>
             <TextInput
               style={styles.passwordInput}
               placeholder="********"
-              secureTextEntry={!showPassword} // Toggle based on state
+              secureTextEntry={!showPassword} // Toggle visibility based on state
               value={password}
               onChangeText={setPassword}
             />
@@ -132,7 +142,7 @@ const SignUpScreen = () => {
           </View>
         </View>
 
-        {/* Register button */}
+        {/* Register button - shows loading indicator when processing */}
         <TouchableOpacity 
           style={styles.registerButton}
           onPress={handleSignUp}

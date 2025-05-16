@@ -2,26 +2,36 @@ import React, { useState, useContext } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, SafeAreaView, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../index'; // Import the auth context
-import { Ionicons } from '@expo/vector-icons'; // Import Ionicons for the eye icon
+import { Ionicons } from '@expo/vector-icons';
 
+/**
+ * LoginScreen - Handles user authentication
+ * Allows users to log in to their account with email and password
+ */
 const LoginScreen = () => {
-  // State variables to store user input
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // New state for password visibility
+  // State variables for form fields and UI
+  const [email, setEmail] = useState('');          // User's email
+  const [password, setPassword] = useState('');    // User's password
+  const [loading, setLoading] = useState(false);   // Loading state for API calls
+  const [showPassword, setShowPassword] = useState(false); // Controls password visibility
+  
   const navigation = useNavigation();
   
-  // Get login function from context
+  // Get login function from the authentication context
   const { login } = useContext(AuthContext);
   
-  // Toggle password visibility
+  /**
+   * Toggle password visibility between hidden and visible
+   */
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
   
-  // Function that runs when user presses the login button
+  /**
+   * Handle login form submission
+   */
   const handleLogin = async () => {
+    // Validate inputs
     if (!email || !password) {
       alert('Please enter both email and password');
       return;
@@ -30,25 +40,26 @@ const LoginScreen = () => {
     setLoading(true);
     
     try {
-      // Use the login function from context that will update isLoggedIn state
+      // Call login function from AuthContext
       const success = await login(email, password);
       
+      // Show error if login failed
       if (!success) {
         alert('Login failed. Please check your credentials and try again.');
       }
       // No need to navigate - the root navigator will handle it based on isLoggedIn state
     } catch (error) {
-      // If there's an error, show it to the user
+      // Handle any errors during login
       console.error('Login error:', error);
       alert('Login failed: ' + (error.message || 'Unknown error occurred'));
     } finally {
-      setLoading(false);
+      setLoading(false); // Always stop loading indicator
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Back button */}
+      {/* Back button to return to welcome screen */}
       <TouchableOpacity 
         style={styles.backButton}
         onPress={() => navigation.goBack()}
@@ -73,7 +84,7 @@ const LoginScreen = () => {
           />
         </View>
 
-        {/* Password input field */}
+        {/* Password input field with visibility toggle */}
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Password</Text>
           <View style={styles.passwordContainer}>
@@ -97,7 +108,7 @@ const LoginScreen = () => {
           </View>
         </View>
 
-        {/* Login button */}
+        {/* Login button - shows loading spinner when processing */}
         <TouchableOpacity 
           style={styles.loginButton}
           onPress={handleLogin}

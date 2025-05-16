@@ -19,21 +19,33 @@ import { workoutService } from '../services/workoutService';
 
 const { height, width } = Dimensions.get('window');
 
+/**
+ * AddExerciseScreen - Allows users to add exercises to a workout day
+ * Includes search, exercise selection and set configuration
+ */
 const AddExerciseScreen = ({ route }) => {
+  // Get the weekday ID from navigation params
   const { weekdayId } = route.params;
   const navigation = useNavigation();
-  const [searchText, setSearchText] = useState('');
-  const [exercises, setExercises] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedExercise, setSelectedExercise] = useState(null);
-  const [showExerciseList, setShowExerciseList] = useState(false);
-  const [sets, setSets] = useState([
+  
+  // State variables for UI and data
+  const [searchText, setSearchText] = useState('');           // Search input text
+  const [exercises, setExercises] = useState([]);             // All available exercises
+  const [loading, setLoading] = useState(true);               // Loading state
+  const [selectedExercise, setSelectedExercise] = useState(null); // Selected exercise
+  const [showExerciseList, setShowExerciseList] = useState(false); // Show/hide dropdown
+  const [sets, setSets] = useState([                         // List of sets with reps/weight
     { id: 1, reps: '', weight: '' }
   ]);
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);        // Form submission state
+  
+  // References for UI elements
   const scrollViewRef = useRef();
   const searchInputRef = useRef();
 
+  /**
+   * Load all exercises from the database when component mounts
+   */
   useEffect(() => {
     const fetchExercises = async () => {
       try {
@@ -48,7 +60,7 @@ const AddExerciseScreen = ({ route }) => {
 
     fetchExercises();
 
-    // Add listener to hide dropdown when clicking anywhere else
+    // Hide dropdown when keyboard is dismissed
     const hideDropdown = () => setShowExerciseList(false);
     Keyboard.addListener('keyboardDidHide', hideDropdown);
 
@@ -57,10 +69,17 @@ const AddExerciseScreen = ({ route }) => {
     };
   }, []);
 
+  /**
+   * Show exercise list dropdown when search field is focused
+   */
   const handleSearchFocus = () => {
     setShowExerciseList(true);
   };
 
+  /**
+   * Handle selection of an exercise from the dropdown
+   * @param {Object} exercise - The selected exercise
+   */
   const handleSelectExercise = (exercise) => {
     setSelectedExercise(exercise);
     setShowExerciseList(false);
@@ -75,11 +94,18 @@ const AddExerciseScreen = ({ route }) => {
     }, 300);
   };
 
+  /**
+   * Update search text and show filtered results
+   * @param {string} text - The search text entered
+   */
   const handleSearchChange = (text) => {
     setSearchText(text);
     setShowExerciseList(true);
   };
 
+  /**
+   * Add a new empty set to the workout
+   */
   const addSet = () => {
     if (sets.length >= 10) return; // Limit to 10 sets
     
@@ -92,11 +118,21 @@ const AddExerciseScreen = ({ route }) => {
     }, 100);
   };
 
+  /**
+   * Remove a set from the workout
+   * @param {number} setId - The ID of the set to remove
+   */
   const removeSet = (setId) => {
     if (sets.length <= 1) return; // Always keep at least one set
     setSets(sets.filter(set => set.id !== setId));
   };
 
+  /**
+   * Update a specific field of a set
+   * @param {number} id - The set ID
+   * @param {string} field - The field to update ('reps' or 'weight')
+   * @param {string} value - The new value
+   */
   const updateSetValue = (id, field, value) => {
     setSets(sets.map(set => {
       if (set.id === id) {
@@ -106,6 +142,9 @@ const AddExerciseScreen = ({ route }) => {
     }));
   };
 
+  /**
+   * Save the exercise with all sets to the database
+   */
   const handleAddExercise = async () => {
     if (!selectedExercise) {
       alert('Please select an exercise');
@@ -146,6 +185,7 @@ const AddExerciseScreen = ({ route }) => {
     }
   };
 
+  // Filter exercises based on search text
   const filteredExercises = searchText.length > 0
     ? exercises.filter(ex => 
         ex.name?.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -276,7 +316,7 @@ const AddExerciseScreen = ({ route }) => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Sets Section */}
+        {/* Sets Configuration Section */}
         {selectedExercise && (
           <View style={styles.setsSection}>
             <Text style={styles.sectionTitle}>Sets</Text>

@@ -1,43 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  FlatList, 
-  TouchableOpacity, 
-  Image, 
-  TextInput,
-  ActivityIndicator,
-  Modal,
-  ScrollView 
+  StyleSheet, Text, View, FlatList, TouchableOpacity, Image, 
+  TextInput, ActivityIndicator, Modal, ScrollView 
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { exerciseService } from '../services/exerciseService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const bodyParts = ["All Body Part", "Chest", "Back", "Legs", "Arms", "Shoulders", "Tricep", "Core", "Glutes", "Full Body"];
-const categories = ["All Category", "Barbell", "Dumbbell", "Machine", "Bodyweight", "Cable", "Cardio"];
-
+/**
+ * ExercisesScreen - Browse and filter all available exercises
+ * Users can search, filter by body part and equipment type
+ */
 const ExercisesScreen = () => {
+  // Constants for dropdown options
+  const bodyParts = ["All Body Part", "Chest", "Back", "Legs", "Arms", "Shoulders", "Tricep", "Core", "Glutes", "Full Body"];
+  const categories = ["All Category", "Barbell", "Dumbbell", "Machine", "Bodyweight", "Cable", "Cardio"];
+
   const navigation = useNavigation();
-  const [exercises, setExercises] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchText, setSearchText] = useState('');
+  
+  // State variables for data and UI
+  const [exercises, setExercises] = useState([]);     // List of exercises to display
+  const [loading, setLoading] = useState(true);       // Loading state for API calls
+  const [searchText, setSearchText] = useState('');   // Search query text
   const [selectedBodyPart, setSelectedBodyPart] = useState('All Body Part');
   const [selectedCategory, setSelectedCategory] = useState('All Category');
+  const [openDropdown, setOpenDropdown] = useState(null); // Which dropdown is open ('bodyPart', 'category', or null)
   
-  // Dropdown state
-  const [openDropdown, setOpenDropdown] = useState(null); // 'bodyPart', 'category', or null
-  
-  // Fetch exercises on component mount and when filters change
+  /**
+   * Fetch exercises when component mounts or filters change
+   */
   useEffect(() => {
     fetchExercises();
   }, [selectedBodyPart, selectedCategory, searchText]);
 
+  /**
+   * Fetch filtered exercises from the API
+   */
   const fetchExercises = async () => {
     setLoading(true);
     try {
+      // Only apply filter if not set to "All"
       const data = await exerciseService.getFilteredExercises(
         selectedBodyPart === 'All Body Part' ? null : selectedBodyPart,
         selectedCategory === 'All Category' ? null : selectedCategory,
@@ -51,30 +54,48 @@ const ExercisesScreen = () => {
     }
   };
 
+  /**
+   * Navigate to exercise details when an exercise is tapped
+   */
   const handleExercisePress = (exercise) => {
     navigation.navigate('ExerciseDetails', { exercise });
   };
 
+  /**
+   * Reset all filters to default values
+   */
   const clearFilters = () => {
     setSelectedBodyPart('All Body Part');
     setSelectedCategory('All Category');
     setSearchText('');
   };
   
+  /**
+   * Toggle dropdown visibility
+   */
   const toggleDropdown = (dropdown) => {
     setOpenDropdown(openDropdown === dropdown ? null : dropdown);
   };
   
+  /**
+   * Select a body part from the dropdown
+   */
   const selectBodyPart = (bodyPart) => {
     setSelectedBodyPart(bodyPart);
     setOpenDropdown(null);
   };
   
+  /**
+   * Select a category from the dropdown
+   */
   const selectCategory = (category) => {
     setSelectedCategory(category);
     setOpenDropdown(null);
   };
 
+  /**
+   * Render each exercise item in the list
+   */
   const renderExerciseItem = ({ item }) => {
     return (
       <TouchableOpacity
@@ -94,7 +115,9 @@ const ExercisesScreen = () => {
         </View>
         <View style={styles.exerciseInfo}>
           <Text style={styles.exerciseName}>{item.name}</Text>
-          <Text style={styles.exerciseCategory}>{item.bodyPart}</Text>
+        <Text style={styles.exerciseCategory}>
+          {item.bodyPart} {item.category ? `• ${item.category}` : ''}
+        </Text>        
         </View>
       </TouchableOpacity>
     );
@@ -221,7 +244,7 @@ const ExercisesScreen = () => {
           )}
         </View>
         
-        {/* Clear Filters Button */}
+        {/* Clear Filters Button - only shown when filters are active */}
         {(selectedBodyPart !== 'All Body Part' || selectedCategory !== 'All Category') && (
           <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
             <Ionicons name="close" size={18} color="#666" />
@@ -249,7 +272,7 @@ const ExercisesScreen = () => {
         />
       )}
       
-      {/* Click outside to close dropdowns */}
+      {/* Transparent backdrop to close dropdowns when clicking outside */}
       {openDropdown && (
         <TouchableOpacity
           style={styles.backdrop}
@@ -263,7 +286,6 @@ const ExercisesScreen = () => {
 
 export default ExercisesScreen;
 
-// Update styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,

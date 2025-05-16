@@ -1,14 +1,26 @@
-import { StyleSheet, Text, View, TouchableOpacity, FlatList, Alert, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, FlatList, Alert } from 'react-native';
 import React, { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
+/**
+ * ExecuteWorkoutScreen - Guides the user through their workout
+ * Shows exercises and sets with tracking for completion
+ */
 const ExecuteWorkoutScreen = ({ route }) => {
+  // Get data passed from previous screen
   const { weekday, exercises } = route.params;
   const navigation = useNavigation();
+  
+  // Track which exercises and sets have been completed
   const [completedExercises, setCompletedExercises] = useState([]);
   const [completedSets, setCompletedSets] = useState({});
 
+  /**
+   * Toggle a set's completion status
+   * @param {string} exerciseId - The ID of the exercise
+   * @param {string} setId - The ID of the set
+   */
   const handleMarkSetComplete = (exerciseId, setId) => {
     setCompletedSets(prev => {
       const exerciseSets = prev[exerciseId] || [];
@@ -29,8 +41,14 @@ const ExecuteWorkoutScreen = ({ route }) => {
     });
   };
 
+  /**
+   * Toggle an exercise's completion status
+   * Marks all sets as complete/incomplete
+   * @param {string} exerciseId - The ID of the exercise
+   */
   const handleMarkExerciseComplete = (exerciseId) => {
     if (completedExercises.includes(exerciseId)) {
+      // If already complete, mark as incomplete
       setCompletedExercises(completedExercises.filter(id => id !== exerciseId));
       // Also clear all completed sets for this exercise
       setCompletedSets(prev => {
@@ -39,6 +57,7 @@ const ExecuteWorkoutScreen = ({ route }) => {
         return updated;
       });
     } else {
+      // Mark as complete
       setCompletedExercises([...completedExercises, exerciseId]);
       // Mark all sets as completed
       const exercise = exercises.find(e => e.$id === exerciseId);
@@ -51,6 +70,12 @@ const ExecuteWorkoutScreen = ({ route }) => {
     }
   };
 
+  /**
+   * Check if all sets of an exercise are completed
+   * @param {string} exerciseId - The ID of the exercise
+   * @param {Array} sets - The sets belonging to the exercise
+   * @return {boolean} - True if all sets are complete
+   */
   const isExerciseComplete = (exerciseId, sets) => {
     if (!sets || sets.length === 0) return completedExercises.includes(exerciseId);
     
@@ -58,14 +83,25 @@ const ExecuteWorkoutScreen = ({ route }) => {
     return sets.every(set => completedSetsForExercise.includes(set.$id));
   };
 
+  /**
+   * Calculate the completion progress as a ratio (0 to 1)
+   * @param {string} exerciseId - The ID of the exercise
+   * @param {Array} sets - The sets belonging to the exercise
+   * @return {number} - Ratio of completed sets (0 to 1)
+   */
   const getExerciseProgress = (exerciseId, sets) => {
-    if (!sets || sets.length === 0) return completedExercises.includes(exerciseId) ? 1 : 0;
+    if (!sets || sets.length === 0) {
+      return completedExercises.includes(exerciseId) ? 1 : 0;
+    }
     
     const completedSetsForExercise = completedSets[exerciseId] || [];
     const completedCount = sets.filter(set => completedSetsForExercise.includes(set.$id)).length;
     return completedCount / sets.length;
   };
 
+  /**
+   * Finish the workout and return to home screen
+   */
   const handleFinishWorkout = () => {
     Alert.alert(
       "Workout Completed",
@@ -101,7 +137,9 @@ const ExecuteWorkoutScreen = ({ route }) => {
         data={exercises}
         keyExtractor={(item) => item.$id}
         contentContainerStyle={styles.exercisesList}
+        showsVerticalScrollIndicator={false}
         renderItem={({ item }) => {
+          // Calculate completion state for this exercise
           const isComplete = isExerciseComplete(item.$id, item.sets);
           const progress = getExerciseProgress(item.$id, item.sets);
           
@@ -110,6 +148,7 @@ const ExecuteWorkoutScreen = ({ route }) => {
               styles.exerciseCard,
               isComplete && styles.completedExerciseCard
             ]}>
+              {/* Exercise Header */}
               <View style={styles.exerciseHeader}>
                 <Text style={styles.exerciseName}>{item.exerciseName}</Text>
                 <TouchableOpacity
@@ -127,7 +166,7 @@ const ExecuteWorkoutScreen = ({ route }) => {
                 </TouchableOpacity>
               </View>
               
-              {/* Progress bar */}
+              {/* Progress bar - shows visual completion progress */}
               {(item.sets && item.sets.length > 0) && (
                 <View style={styles.progressBarContainer}>
                   <View style={[
@@ -137,9 +176,10 @@ const ExecuteWorkoutScreen = ({ route }) => {
                 </View>
               )}
               
-              {/* Sets list */}
+              {/* Sets list - shows each set with reps and weight */}
               {(item.sets && item.sets.length > 0) ? (
                 <View style={styles.setsContainer}>
+                  {/* Table header */}
                   <View style={styles.setsTableHeader}>
                     <Text style={[styles.setHeaderCell, { flex: 0.2 }]}>Set</Text>
                     <Text style={[styles.setHeaderCell, { flex: 0.4 }]}>Reps</Text>
@@ -147,6 +187,7 @@ const ExecuteWorkoutScreen = ({ route }) => {
                     <Text style={[styles.setHeaderCell, { width: 50 }]}></Text>
                   </View>
                   
+                  {/* Individual sets */}
                   {item.sets.map(set => {
                     const setCompleted = (completedSets[item.$id] || []).includes(set.$id);
                     
@@ -206,7 +247,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     padding: 20,
-    paddingTop: 40,
+    paddingTop: 10,
   },
   backButton: {
     flexDirection: 'row',
@@ -348,7 +389,7 @@ const styles = StyleSheet.create({
   },
   finishButton: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 90,
     left: 20,
     right: 20,
     backgroundColor: '#1E0371',
