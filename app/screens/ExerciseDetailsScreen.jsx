@@ -7,25 +7,26 @@ import { Ionicons } from '@expo/vector-icons';
 import { exerciseService } from '../services/exerciseService';
 
 /**
- * ExerciseDetailsScreen - Shows detailed information about a specific exercise
- * Displays name, image, category, instructions, and tips
+ * ExerciseDetailsScreen - Shows all information about an exercise
+ * Like a detailed card with pictures, instructions, and tips
  */
 const ExerciseDetailsScreen = ({ route, navigation }) => {
-  // Get exercise details from navigation params
+  // Get the exercise from the previous screen
   const { exercise: initialExercise, exerciseId } = route.params;
   
-  // State variables
-  const [exercise, setExercise] = useState(initialExercise || null);
-  const [loading, setLoading] = useState(true);
-  const [imageError, setImageError] = useState(false);
+  // Things the screen needs to keep track of
+  const [exercise, setExercise] = useState(initialExercise || null); // The exercise data to display
+  const [loading, setLoading] = useState(true);  // Whether we're still loading data
+  const [imageError, setImageError] = useState(false); // If the image fails to load
 
   /**
-   * Fetch complete exercise details when component mounts
+   * Get the full exercise details when screen opens
+   * This runs once when you first see the screen
    */
   useEffect(() => {
     const fetchExerciseDetails = async () => {
       try {
-        // Determine which ID to use
+        // Figure out which exercise ID to use
         let id = initialExercise?.$id || exerciseId;
         if (!id) {
           console.error('No exercise ID provided');
@@ -33,12 +34,13 @@ const ExerciseDetailsScreen = ({ route, navigation }) => {
           return;
         }
 
-        // Fetch the complete exercise details from the API
+        // Get all the details from the database
         const fullExercise = await exerciseService.getExerciseById(id);
         setExercise(fullExercise);
       } catch (error) {
         console.error('Failed to fetch exercise details:', error);
       } finally {
+        // Hide the loading spinner either way
         setLoading(false);
       }
     };
@@ -46,7 +48,7 @@ const ExerciseDetailsScreen = ({ route, navigation }) => {
     fetchExerciseDetails();
   }, [initialExercise?.$id, exerciseId]);
 
-  // Show loading spinner while fetching data
+  // Show a spinner while loading
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -55,7 +57,7 @@ const ExerciseDetailsScreen = ({ route, navigation }) => {
     );
   }
 
-  // Show error message if exercise not found
+  // Show an error message if we can't find the exercise
   if (!exercise) {
     return (
       <View style={styles.container}>
@@ -75,7 +77,7 @@ const ExerciseDetailsScreen = ({ route, navigation }) => {
   
   return (
     <View style={styles.container}>
-      {/* Back button */}
+      {/* Back button to return to the previous screen */}
       <TouchableOpacity 
         style={styles.backButton}
         onPress={() => navigation.goBack()}
@@ -89,16 +91,16 @@ const ExerciseDetailsScreen = ({ route, navigation }) => {
         contentContainerStyle={styles.scrollViewContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Exercise title */}
+        {/* Exercise name at the top */}
         <Text style={styles.title}>{exercise.name}</Text>
         
-        {/* Exercise image */}
+        {/* Exercise picture */}
         <View style={styles.imageContainer}>
           <Image
             source={{ 
               uri: !imageError && exercise.thumbnail 
                 ? exerciseService.getThumbnailUrl(exercise.thumbnail)
-                : 'https://icons.iconarchive.com/icons/icons8/ios7/512/Sports-Dumbbell-icon.png'
+                : 'https://icons.iconarchive.com/icons/icons8/ios7/512/Sports-Dumbbell-icon.png' // Default image if real one fails
             }}
             style={styles.image}
             resizeMode="contain"
@@ -109,7 +111,7 @@ const ExerciseDetailsScreen = ({ route, navigation }) => {
           />
         </View>
         
-        {/* Category and body part tags */}
+        {/* Tags showing the body part and equipment type */}
         <View style={styles.tagsContainer}>
           {exercise.bodyPart && (
             <View style={styles.tag}>
@@ -123,7 +125,7 @@ const ExerciseDetailsScreen = ({ route, navigation }) => {
           )}
         </View>
         
-        {/* Instructions section */}
+        {/* Step-by-step instructions with bullet points */}
         {exercise.instructions ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Instructions</Text>
@@ -143,7 +145,7 @@ const ExerciseDetailsScreen = ({ route, navigation }) => {
           </View>
         )}
         
-        {/* Tips section */}
+        {/* Helpful tips in a highlighted box */}
         {exercise.tips && (
           <View style={styles.tipSection}>
             <View style={styles.tipBox}>
@@ -160,23 +162,27 @@ const ExerciseDetailsScreen = ({ route, navigation }) => {
 export default ExerciseDetailsScreen;
 
 
+/**
+ * Styles control how everything looks on screen
+ * Colors, spacing, sizes, and layout
+ */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#fff', // White background
     paddingTop: 0,
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'center', // Center the spinner
     alignItems: 'center',
     backgroundColor: '#fff',
   },
   scrollView: {
-    padding: 20,
+    padding: 20, // Space around all content
   },
   scrollViewContent: {
-    paddingBottom: 80, // Add padding at the bottom for the tab bar
+    paddingBottom: 80, // Extra space at bottom so content isn't hidden by tab bar
   },
   backButton: {
     flexDirection: 'row',
@@ -197,7 +203,7 @@ const styles = StyleSheet.create({
   imageContainer: {
     height: 200,
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 12, // Rounded corners
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -208,14 +214,14 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   tagsContainer: {
-    flexDirection: 'row',
+    flexDirection: 'row', // Arrange tags side by side
     marginBottom: 25,
   },
   tag: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#f0f0f0', // Light gray background
     paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: 20,
+    borderRadius: 20, // Pill shape
     marginRight: 10,
   },
   tagText: {
@@ -223,7 +229,7 @@ const styles = StyleSheet.create({
     color: '#444',
   },
   section: {
-    marginBottom: 25,
+    marginBottom: 25, // Space between sections
   },
   sectionTitle: {
     fontSize: 20,
@@ -234,7 +240,7 @@ const styles = StyleSheet.create({
     marginLeft: 5,
   },
   instructionItem: {
-    flexDirection: 'row',
+    flexDirection: 'row', // Bullet point and text side by side
     marginBottom: 12,
   },
   bulletPoint: {
@@ -244,16 +250,16 @@ const styles = StyleSheet.create({
     color: '#444',
   },
   instructionText: {
-    flex: 1,
+    flex: 1, // Take up remaining space
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 22, // Space between lines for readability
     color: '#333',
   },
   tipSection: {
     marginBottom: 30,
   },
   tipBox: {
-    backgroundColor: '#FFF9E6',
+    backgroundColor: '#FFF9E6', // Light yellow background
     borderRadius: 12,
     padding: 15,
     flexDirection: 'row',

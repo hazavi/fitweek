@@ -6,17 +6,21 @@ import { account } from '../config/appwrite';
 import { workoutService } from '../services/workoutService';
 
 /**
- * WorkoutScreen - The main screen showing the weekly workout schedule
- * Users can see all days of the week and select a day to view/edit exercises
+ * WorkoutScreen - Main screen showing the weekly workout schedule
+ * Displays a calendar-style view of all workout days with exercise counts
+ * Highlights the current day and allows navigation to detailed day views
  */
 const WorkoutScreen = () => {
   const navigation = useNavigation();
-  const [user, setUser] = useState(null);         // Current logged in user
-  const [weekdays, setWeekdays] = useState([]);   // List of all weekdays with their workouts
-  const [loading, setLoading] = useState(true);   // Loading state for API calls
-  const [currentDay, setCurrentDay] = useState(''); // Today's day name (e.g., "Monday")
+  const [user, setUser] = useState(null);         // Current authenticated user
+  const [weekdays, setWeekdays] = useState([]);   // Weekly workout schedule data
+  const [loading, setLoading] = useState(true);   // Controls loading indicator 
+  const [currentDay, setCurrentDay] = useState(''); // Today's day name for highlighting
 
-  // Default weekdays structure - used as fallback and for new users
+  /**
+   * Default workout templates for each day of the week
+   * Used for new users or as fallback when database fetch fails
+   */
   const defaultWeekdays = [
     { dayName: 'Monday', description: 'Back + Bicep', exerciseCount: 0, $id: 'monday' },
     { dayName: 'Tuesday', description: 'Shoulder + Arms', exerciseCount: 0, $id: 'tuesday' },
@@ -27,75 +31,76 @@ const WorkoutScreen = () => {
     { dayName: 'Sunday', description: 'Rest Day', exerciseCount: 0, $id: 'sunday' },
   ];
 
-  // Get current day name when component mounts
+  /**
+   * Determines the current day of week when component mounts
+   * Used to highlight today's workout in the UI for better UX
+   */
   useEffect(() => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const today = new Date().getDay();  // 0 = Sunday, 1 = Monday, etc.
+    const today = new Date().getDay();  // 0=Sunday through 6=Saturday
     setCurrentDay(days[today]);
   }, []);
 
   /**
-   * Ensures the user has weekdays setup in the database
-   * Creates default weekdays if none exist
+   * Creates default weekdays for new users if they don't exist yet
+   * Ensures every user has a complete 7-day workout template
+   * 
+   * @param {string} userId - Current user's ID for database operations
+   * @returns {Promise<Array>} - Array of weekday objects
    */
   const ensureWeekdaysExist = async (userId) => {
     try {
-      // Check if user already has weekdays
+      // First try to fetch user's existing weekdays
       let userWeekdays;
       try {
         userWeekdays = await workoutService.getUserWeekdays(userId);
       } catch (error) {
-        console.log('Error checking for existing weekdays:', error);
+        console.log('Error checking weekdays:', error);
         userWeekdays = [];
       }
 
-      // Create defaults if none exist or fewer than expected
+      // Create default weekdays if needed (new user or incomplete data)
       if (!userWeekdays || userWeekdays.length < 7) {
         console.log('Creating initial weekdays for user:', userId);
         await workoutService.createInitialWeekdays(userId);
-        
-        // Fetch the newly created weekdays
         userWeekdays = await workoutService.getUserWeekdays(userId);
       }
       
       return userWeekdays;
     } catch (error) {
-      console.error('Error ensuring weekdays exist:', error);
+      console.error('Error in weekday setup:', error);
       return [];
     }
   };
 
   /**
-   * Fetches weekdays with their exercise counts
-   * This gives us the data needed to show how many exercises are in each day
+   * Fetches weekdays with exercise counts for the current user
+   * This data shows how many exercises are planned for each day
+   * 
+   * @param {string} userId - Current user's ID
+   * @returns {Promise<Array>} - Weekdays with their exercise counts
    */
   const fetchWeekdaysWithExerciseCounts = async (userId) => {
     try {
-      // First ensure the user has weekdays set up
       const userWeekdays = await ensureWeekdaysExist(userId);
-      
-      if (userWeekdays && userWeekdays.length > 0) {
-        // Return user's weekdays (they include exercise counts)
-        return userWeekdays;
-      } else {
-        console.warn('No weekdays found for user, using defaults');
-        return defaultWeekdays;
-      }
+      return userWeekdays?.length > 0 ? userWeekdays : defaultWeekdays;
     } catch (error) {
-      console.error('Error fetching weekdays with exercise counts:', error);
-      return defaultWeekdays; // Fallback to defaults if there's an error
+      console.error('Error fetching workout data:', error);
+      return defaultWeekdays; // Fallback to default template on error
     }
   };
 
-  // Fetch user data once when component mounts
+  /**
+   * Fetches current user data on component mount
+   * Required for personalization and workout data association
+   */
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        // Get current user from Appwrite
         const userData = await account.get();
         setUser(userData);
       } catch (error) {
-        console.error('Error fetching user:', error);
+        console.error('User fetch error:', error);
       } finally {
         setLoading(false);
       }
@@ -104,17 +109,20 @@ const WorkoutScreen = () => {
     fetchUserData();
   }, []);
 
-  // Fetch weekdays whenever screen gains focus or user changes
+  /**
+   * Refreshes workout data when screen is focused or user changes
+   * Ensures workout data stays current after additions/modifications
+   */
   useFocusEffect(
     useCallback(() => {
       const loadData = async () => {
-        if (user && user.$id) {
+        if (user?.$id) {
           setLoading(true);
           try {
             const fetchedWeekdays = await fetchWeekdaysWithExerciseCounts(user.$id);
             setWeekdays(fetchedWeekdays);
           } catch (error) {
-            console.error('Error loading weekdays:', error);
+            console.error('Weekday load error:', error);
             setWeekdays(defaultWeekdays);
           } finally {
             setLoading(false);
@@ -126,7 +134,10 @@ const WorkoutScreen = () => {
     }, [user])
   );
 
-  // Navigate to weekday details screen when a day is tapped
+  /**
+   * Navigates to detailed view when a day is selected
+   * @param {Object} weekday - The selected day's data
+   */
   const handleWeekdayPress = (weekday) => {
     navigation.navigate('WeekdayDetails', { weekday });
   };

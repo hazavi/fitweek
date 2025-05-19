@@ -3,17 +3,14 @@ import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FontAwesome } from '@expo/vector-icons';
 import { FontAwesome6 } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
  * A custom tab bar that floats at the bottom of the screen
  */
 function FloatingTabBar({ state, descriptors, navigation }) {
-  // Get safe area insets for devices with notches or home indicators
-  const insets = useSafeAreaInsets();
   
   // Use a fixed margin instead of dynamic insets for consistent appearance
-  const bottomMargin = 3;
+  const bottomMargin = 2;
 
   return (
     <View style={[styles.container, { marginBottom: bottomMargin }]}>

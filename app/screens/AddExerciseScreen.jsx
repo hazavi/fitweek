@@ -20,31 +20,32 @@ import { workoutService } from '../services/workoutService';
 const { height, width } = Dimensions.get('window');
 
 /**
- * AddExerciseScreen - Allows users to add exercises to a workout day
- * Includes search, exercise selection and set configuration
+ * AddExerciseScreen - Helps users add exercises to a workout day
+ * Users can search for exercises, select one, and add sets with reps and weights
  */
 const AddExerciseScreen = ({ route }) => {
   // Get the weekday ID from navigation params
   const { weekdayId } = route.params;
   const navigation = useNavigation();
   
-  // State variables for UI and data
-  const [searchText, setSearchText] = useState('');           // Search input text
-  const [exercises, setExercises] = useState([]);             // All available exercises
-  const [loading, setLoading] = useState(true);               // Loading state
-  const [selectedExercise, setSelectedExercise] = useState(null); // Selected exercise
-  const [showExerciseList, setShowExerciseList] = useState(false); // Show/hide dropdown
-  const [sets, setSets] = useState([                         // List of sets with reps/weight
+  // Things the screen keeps track of
+  const [searchText, setSearchText] = useState('');           // What user types in search box
+  const [exercises, setExercises] = useState([]);             // List of all exercises
+  const [loading, setLoading] = useState(true);               // Shows spinner while loading
+  const [selectedExercise, setSelectedExercise] = useState(null); // Which exercise user picked
+  const [showExerciseList, setShowExerciseList] = useState(false); // Whether to show dropdown
+  const [sets, setSets] = useState([                          // User's workout sets
     { id: 1, reps: '', weight: '' }
   ]);
-  const [submitting, setSubmitting] = useState(false);        // Form submission state
+  const [submitting, setSubmitting] = useState(false);        // Whether form is being saved
   
-  // References for UI elements
+  // References help us control scrolling and input focus
   const scrollViewRef = useRef();
   const searchInputRef = useRef();
 
   /**
-   * Load all exercises from the database when component mounts
+   * Get all exercises when screen first loads
+   * Also sets up keyboard listener to hide dropdown when keyboard closes
    */
   useEffect(() => {
     const fetchExercises = async () => {
@@ -52,7 +53,7 @@ const AddExerciseScreen = ({ route }) => {
         const data = await exerciseService.getExercises();
         setExercises(data);
       } catch (error) {
-        console.error('Failed to fetch exercises:', error);
+        console.error('Could not get exercises:', error);
       } finally {
         setLoading(false);
       }
@@ -60,7 +61,7 @@ const AddExerciseScreen = ({ route }) => {
 
     fetchExercises();
 
-    // Hide dropdown when keyboard is dismissed
+    // Hide dropdown when keyboard closes
     const hideDropdown = () => setShowExerciseList(false);
     Keyboard.addListener('keyboardDidHide', hideDropdown);
 
@@ -70,15 +71,16 @@ const AddExerciseScreen = ({ route }) => {
   }, []);
 
   /**
-   * Show exercise list dropdown when search field is focused
+   * Open the exercise list when user taps search box
+   * Makes it easy to browse exercises
    */
   const handleSearchFocus = () => {
     setShowExerciseList(true);
   };
 
   /**
-   * Handle selection of an exercise from the dropdown
-   * @param {Object} exercise - The selected exercise
+   * What happens when user picks an exercise from the list
+   * Shows the selected exercise and hides the dropdown
    */
   const handleSelectExercise = (exercise) => {
     setSelectedExercise(exercise);
@@ -86,7 +88,7 @@ const AddExerciseScreen = ({ route }) => {
     setSearchText(exercise.name);
     Keyboard.dismiss();
     
-    // Scroll to sets section after selection
+    // Scroll down to show sets section
     setTimeout(() => {
       if (scrollViewRef.current) {
         scrollViewRef.current.scrollTo({ y: 300, animated: true });
@@ -95,8 +97,8 @@ const AddExerciseScreen = ({ route }) => {
   };
 
   /**
-   * Update search text and show filtered results
-   * @param {string} text - The search text entered
+   * Update search results as user types
+   * Shows matching exercises in dropdown
    */
   const handleSearchChange = (text) => {
     setSearchText(text);
@@ -105,14 +107,15 @@ const AddExerciseScreen = ({ route }) => {
 
   /**
    * Add a new empty set to the workout
+   * Limited to 10 sets maximum for simplicity
    */
   const addSet = () => {
-    if (sets.length >= 10) return; // Limit to 10 sets
+    if (sets.length >= 10) return; // Don't allow more than 10 sets
     
     const newSetId = sets.length > 0 ? Math.max(...sets.map(s => s.id)) + 1 : 1;
     setSets([...sets, { id: newSetId, reps: '', weight: '' }]);
     
-    // Scroll to bottom after adding a set
+    // Scroll to bottom so user can see the new set
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 100);
@@ -120,7 +123,7 @@ const AddExerciseScreen = ({ route }) => {
 
   /**
    * Remove a set from the workout
-   * @param {number} setId - The ID of the set to remove
+   * Always keeps at least one set
    */
   const removeSet = (setId) => {
     if (sets.length <= 1) return; // Always keep at least one set
@@ -128,10 +131,8 @@ const AddExerciseScreen = ({ route }) => {
   };
 
   /**
-   * Update a specific field of a set
-   * @param {number} id - The set ID
-   * @param {string} field - The field to update ('reps' or 'weight')
-   * @param {string} value - The new value
+   * Update reps or weight for a specific set
+   * Called when user types in the number fields
    */
   const updateSetValue = (id, field, value) => {
     setSets(sets.map(set => {
@@ -143,14 +144,17 @@ const AddExerciseScreen = ({ route }) => {
   };
 
   /**
-   * Save the exercise with all sets to the database
+   * Save the exercise with all sets to the workout
+   * Checks for errors before saving
    */
   const handleAddExercise = async () => {
+    // Check if user forgot to select an exercise
     if (!selectedExercise) {
       alert('Please select an exercise');
       return;
     }
 
+    // Make sure all sets have reps and weights filled in
     if (sets.some(set => !set.reps || !set.weight)) {
       alert('Please fill in reps and weight for all sets');
       return;
@@ -159,13 +163,13 @@ const AddExerciseScreen = ({ route }) => {
     try {
       setSubmitting(true);
       
-      // First create the workout exercise
+      // First add the exercise to the weekday
       const workoutExercise = await workoutService.addExerciseToWeekday(
         weekdayId,
         selectedExercise.$id
       );
       
-      // Then add all sets
+      // Then add all the sets for this exercise
       for (const set of sets) {
         await workoutService.addSetToExercise(
           workoutExercise.$id,
@@ -175,17 +179,17 @@ const AddExerciseScreen = ({ route }) => {
         );
       }
       
-      // Navigate back to WeekdayDetails
+      // Go back to previous screen when done
       navigation.goBack();
     } catch (error) {
-      console.error('Failed to add exercise:', error);
-      alert('Failed to add exercise. Please try again.');
+      console.error('Could not add exercise:', error);
+      alert('Could not add exercise. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Filter exercises based on search text
+  // Show only exercises that match the search text
   const filteredExercises = searchText.length > 0
     ? exercises.filter(ex => 
         ex.name?.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -196,6 +200,7 @@ const AddExerciseScreen = ({ route }) => {
 
   return (
     <View style={styles.container}>
+      {/* Top section with header and search */}
       <View style={styles.headerContainer}>
         {/* Back Button */}
         <TouchableOpacity 
@@ -208,7 +213,7 @@ const AddExerciseScreen = ({ route }) => {
 
         <Text style={styles.title}>Add Exercise</Text>
 
-        {/* Exercise Selection Section */}
+        {/* Search box and exercise selection */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Select Exercise</Text>
           <View style={styles.searchContainer}>
@@ -221,6 +226,7 @@ const AddExerciseScreen = ({ route }) => {
               onChangeText={handleSearchChange}
               onFocus={handleSearchFocus}
             />
+            {/* Clear button appears when there's text */}
             {searchText.length > 0 && (
               <TouchableOpacity onPress={() => {
                 setSearchText('');
@@ -231,10 +237,11 @@ const AddExerciseScreen = ({ route }) => {
             )}
           </View>
           
-          {/* Selected Exercise Display */}
+          {/* Shows the currently selected exercise */}
           {selectedExercise && (
             <View style={styles.selectedExerciseContainer}>
               <View style={styles.selectedExerciseContent}>
+                {/* Exercise image */}
                 {selectedExercise.thumbnail ? (
                   <Image 
                     source={{ uri: selectedExercise.thumbnail }} 
@@ -246,6 +253,7 @@ const AddExerciseScreen = ({ route }) => {
                     <Ionicons name="barbell-outline" size={30} color="#666" />
                   </View>
                 )}
+                {/* Exercise name and category */}
                 <View style={styles.selectedExerciseDetails}>
                   <Text style={styles.selectedExerciseName}>{selectedExercise.name}</Text>
                   <Text style={styles.selectedExerciseCategory}>
@@ -256,7 +264,7 @@ const AddExerciseScreen = ({ route }) => {
             </View>
           )}
           
-          {/* Exercise dropdown list */}
+          {/* Dropdown list of exercises */}
           {showExerciseList && (
             <View style={styles.dropdownContainer}>
               {loading ? (
@@ -276,6 +284,7 @@ const AddExerciseScreen = ({ route }) => {
                       onPress={() => handleSelectExercise(item)}
                     >
                       <View style={styles.exerciseItemContent}>
+                        {/* Exercise thumbnail in list */}
                         {item.thumbnail ? (
                           <Image 
                             source={{ uri: item.thumbnail }} 
@@ -288,6 +297,7 @@ const AddExerciseScreen = ({ route }) => {
                           </View>
                         )}
                         
+                        {/* Exercise name and details in list */}
                         <View style={styles.exerciseTextContainer}>
                           <Text style={styles.exerciseName}>{item.name}</Text>
                           <Text style={styles.exerciseCategory}>
@@ -309,6 +319,7 @@ const AddExerciseScreen = ({ route }) => {
         </View>
       </View>
       
+      {/* Scrollable area for sets */}
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollViewContent}
@@ -316,12 +327,12 @@ const AddExerciseScreen = ({ route }) => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Sets Configuration Section */}
+        {/* Sets section only appears after exercise is selected */}
         {selectedExercise && (
           <View style={styles.setsSection}>
             <Text style={styles.sectionTitle}>Sets</Text>
             
-            {/* Table Header */}
+            {/* Table headers for the sets table */}
             <View style={styles.setTableHeader}>
               <Text style={[styles.headerText, styles.setColumn]}>Set</Text>
               <Text style={[styles.headerText, styles.repsColumn]}>Reps</Text>
@@ -329,11 +340,12 @@ const AddExerciseScreen = ({ route }) => {
               <View style={styles.actionColumn} />
             </View>
             
-            {/* Sets List */}
+            {/* List of all sets with input fields */}
             {sets.map((set) => (
               <View key={set.id} style={styles.setRow}>
                 <Text style={[styles.setColumn, styles.setText]}>{set.id}</Text>
                 
+                {/* Reps input field */}
                 <View style={styles.repsColumn}>
                   <TextInput
                     style={styles.valueInput}
@@ -344,6 +356,7 @@ const AddExerciseScreen = ({ route }) => {
                   />
                 </View>
                 
+                {/* Weight input field */}
                 <View style={styles.weightColumn}>
                   <TextInput
                     style={styles.valueInput}
@@ -354,6 +367,7 @@ const AddExerciseScreen = ({ route }) => {
                   />
                 </View>
                 
+                {/* Delete set button */}
                 <TouchableOpacity 
                   style={styles.actionColumn} 
                   onPress={() => removeSet(set.id)}
@@ -368,7 +382,7 @@ const AddExerciseScreen = ({ route }) => {
               </View>
             ))}
             
-            {/* Add Set Button */}
+            {/* Button to add another set */}
             {sets.length < 10 && (
               <TouchableOpacity style={styles.addSetButton} onPress={addSet}>
                 <Ionicons name="add-circle-outline" size={20} color="#0066CC" />
@@ -378,11 +392,11 @@ const AddExerciseScreen = ({ route }) => {
           </View>
         )}
         
-        {/* Add space at bottom for scrolling */}
+        {/* Extra space at bottom for better scrolling */}
         <View style={{height: 120}} />
       </ScrollView>
 
-      {/* Submit Button - Fixed at bottom */}
+      {/* Save button fixed at bottom of screen */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity 
           style={[

@@ -9,92 +9,109 @@ import { exerciseService } from '../services/exerciseService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 /**
- * ExercisesScreen - Browse and filter all available exercises
- * Users can search, filter by body part and equipment type
+ * ExercisesScreen - Browse and search exercise library
+ * Users can find exercises by name, body part, or equipment type
  */
 const ExercisesScreen = () => {
-  // Constants for dropdown options
-  const bodyParts = ["All Body Part", "Chest", "Back", "Legs", "Arms", "Shoulders", "Tricep", "Core", "Glutes", "Full Body"];
-  const categories = ["All Category", "Barbell", "Dumbbell", "Machine", "Bodyweight", "Cable", "Cardio"];
+  // Lists of options for the filter dropdowns
+  const bodyParts = ["Chest", "Back", "Legs", "Arms", "Shoulders", "Tricep", "Core", "Glutes", "Full Body"];
+  const categories = ["Barbell", "Dumbbell", "Machine", "Bodyweight", "Cable", "Cardio"];
 
   const navigation = useNavigation();
   
-  // State variables for data and UI
-  const [exercises, setExercises] = useState([]);     // List of exercises to display
-  const [loading, setLoading] = useState(true);       // Loading state for API calls
-  const [searchText, setSearchText] = useState('');   // Search query text
-  const [selectedBodyPart, setSelectedBodyPart] = useState('All Body Part');
-  const [selectedCategory, setSelectedCategory] = useState('All Category');
-  const [openDropdown, setOpenDropdown] = useState(null); // Which dropdown is open ('bodyPart', 'category', or null)
+  // Information the screen needs to remember
+  const [exercises, setExercises] = useState([]);     // List of exercises to show
+  const [loading, setLoading] = useState(true);       // Shows spinner while loading
+  const [searchText, setSearchText] = useState('');   // What user types in search box
+  const [selectedBodyPart, setSelectedBodyPart] = useState('All Body Part'); // Current body part filter
+  const [selectedCategory, setSelectedCategory] = useState('All Category');   // Current equipment filter
+  const [openDropdown, setOpenDropdown] = useState(null); // Which dropdown menu is open
   
   /**
-   * Fetch exercises when component mounts or filters change
+   * Get exercises when screen loads or filters change
+   * This runs automatically when searchText, body part or category changes
    */
   useEffect(() => {
     fetchExercises();
   }, [selectedBodyPart, selectedCategory, searchText]);
 
   /**
-   * Fetch filtered exercises from the API
+   * Get filtered exercises from the database
+   * Shows only exercises that match all active filters
    */
   const fetchExercises = async () => {
+    // Show loading spinner
     setLoading(true);
+    
     try {
-      // Only apply filter if not set to "All"
+      // Only filter if user selected something other than "All"
       const data = await exerciseService.getFilteredExercises(
         selectedBodyPart === 'All Body Part' ? null : selectedBodyPart,
         selectedCategory === 'All Category' ? null : selectedCategory,
-        searchText
+        searchText  // Search text is always applied if not empty
       );
+      
+      // Update the list with what we got
       setExercises(data);
     } catch (error) {
-      console.error('Failed to fetch exercises:', error);
+      console.error('Could not get exercises:', error);
+      // Could show error message to user here
     } finally {
+      // Hide loading spinner when done
       setLoading(false);
     }
   };
 
   /**
-   * Navigate to exercise details when an exercise is tapped
+   * Open exercise details when user taps an exercise
+   * Takes user to a new screen with full exercise information
    */
   const handleExercisePress = (exercise) => {
     navigation.navigate('ExerciseDetails', { exercise });
   };
 
   /**
-   * Reset all filters to default values
+   * Reset all filters to default settings
+   * Useful when user wants to start fresh
    */
   const clearFilters = () => {
     setSelectedBodyPart('All Body Part');
     setSelectedCategory('All Category');
     setSearchText('');
+    // Exercise list will refresh automatically due to useEffect
   };
   
   /**
-   * Toggle dropdown visibility
+   * Open or close a dropdown menu
+   * Closes any other open dropdown first
    */
   const toggleDropdown = (dropdown) => {
+    // If this dropdown is already open, close it
+    // Otherwise, open this one and close any other
     setOpenDropdown(openDropdown === dropdown ? null : dropdown);
   };
   
   /**
-   * Select a body part from the dropdown
+   * Choose a body part from the dropdown menu
+   * Updates the filter and closes the dropdown
    */
   const selectBodyPart = (bodyPart) => {
     setSelectedBodyPart(bodyPart);
-    setOpenDropdown(null);
+    setOpenDropdown(null); // Close dropdown after selection
   };
   
   /**
-   * Select a category from the dropdown
+   * Choose an equipment type from the dropdown menu
+   * Updates the filter and closes the dropdown
    */
   const selectCategory = (category) => {
     setSelectedCategory(category);
-    setOpenDropdown(null);
+    setOpenDropdown(null); // Close dropdown after selection
   };
 
   /**
-   * Render each exercise item in the list
+   * Create each exercise card for the list
+   * Shows image, name, and basic details for each exercise
    */
   const renderExerciseItem = ({ item }) => {
     return (
@@ -102,22 +119,25 @@ const ExercisesScreen = () => {
         style={styles.exerciseItem}
         onPress={() => handleExercisePress(item)}
       >
+        {/* Exercise thumbnail image */}
         <View style={styles.thumbnailContainer}>
           <Image
             source={{ 
               uri: item.thumbnail 
                 ? exerciseService.getThumbnailUrl(item.thumbnail) 
-                : 'https://icons.iconarchive.com/icons/icons8/ios7/512/Sports-Dumbbell-icon.png'
+                : 'https://icons.iconarchive.com/icons/icons8/ios7/512/Sports-Dumbbell-icon.png' // Fallback image
             }}
             style={styles.thumbnail}
             resizeMode="cover"
           />
         </View>
+        
+        {/* Exercise name and details */}
         <View style={styles.exerciseInfo}>
           <Text style={styles.exerciseName}>{item.name}</Text>
-        <Text style={styles.exerciseCategory}>
-          {item.bodyPart} {item.category ? `• ${item.category}` : ''}
-        </Text>        
+          <Text style={styles.exerciseCategory}>
+            {item.bodyPart} {item.category ? `• ${item.category}` : ''}
+          </Text>        
         </View>
       </TouchableOpacity>
     );
@@ -125,9 +145,10 @@ const ExercisesScreen = () => {
 
   return (
     <View style={styles.container}>
+      {/* Screen title */}
       <Text style={styles.title}>Exercises</Text>
       
-      {/* Search Bar */}
+      {/* Search box */}
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
         <TextInput
@@ -138,15 +159,15 @@ const ExercisesScreen = () => {
         />
       </View>
       
-      {/* Filter Section */}
+      {/* Filter options */}
       <View style={styles.filterSection}>
-        {/* Body Part Dropdown */}
+        {/* Body part dropdown menu */}
         <View style={styles.dropdownContainer}>
           <TouchableOpacity 
             style={[
               styles.filterButton, 
-              selectedBodyPart !== 'All Body Part' && styles.activeFilter,
-              openDropdown === 'bodyPart' && styles.activeDropdown
+              selectedBodyPart !== 'All Body Part' && styles.activeFilter, // Highlight if filter is active
+              openDropdown === 'bodyPart' && styles.activeDropdown // Special style when menu is open
             ]}
             onPress={() => toggleDropdown('bodyPart')}
           >
@@ -159,7 +180,7 @@ const ExercisesScreen = () => {
             />
           </TouchableOpacity>
           
-          {/* Body Part Dropdown Menu */}
+          {/* Body part dropdown items */}
           {openDropdown === 'bodyPart' && (
             <View style={styles.dropdownWrapper}>
               <View style={styles.dropdown}>
@@ -169,7 +190,7 @@ const ExercisesScreen = () => {
                       key={item}
                       style={[
                         styles.dropdownItem,
-                        selectedBodyPart === item && styles.selectedDropdownItem
+                        selectedBodyPart === item && styles.selectedDropdownItem // Highlight selected item
                       ]}
                       onPress={() => selectBodyPart(item)}
                     >
@@ -192,7 +213,7 @@ const ExercisesScreen = () => {
           )}
         </View>
         
-        {/* Category Dropdown */}
+        {/* Equipment type dropdown menu - works the same as body part dropdown */}
         <View style={styles.dropdownContainer}>
           <TouchableOpacity 
             style={[
@@ -211,7 +232,7 @@ const ExercisesScreen = () => {
             />
           </TouchableOpacity>
           
-          {/* Category Dropdown Menu */}
+          {/* Category dropdown items */}
           {openDropdown === 'category' && (
             <View style={styles.dropdownWrapper}>
               <View style={styles.dropdown}>
@@ -221,7 +242,7 @@ const ExercisesScreen = () => {
                       key={item}
                       style={[
                         styles.dropdownItem,
-                        selectedCategory === item && styles.selectedDropdownItem
+                        selectedCategory === item && styles.selectedDropdownItem // Highlight selected item
                       ]}
                       onPress={() => selectCategory(item)}
                     >
@@ -244,7 +265,7 @@ const ExercisesScreen = () => {
           )}
         </View>
         
-        {/* Clear Filters Button - only shown when filters are active */}
+        {/* Clear filters button - only shown when filters are active */}
         {(selectedBodyPart !== 'All Body Part' || selectedCategory !== 'All Category') && (
           <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
             <Ionicons name="close" size={18} color="#666" />
@@ -252,7 +273,7 @@ const ExercisesScreen = () => {
         )}
       </View>
       
-      {/* Exercise List */}
+      {/* Exercise list or loading spinner */}
       {loading ? (
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color="#222" />
@@ -272,7 +293,7 @@ const ExercisesScreen = () => {
         />
       )}
       
-      {/* Transparent backdrop to close dropdowns when clicking outside */}
+      {/* Invisible layer that closes dropdowns when tapped */}
       {openDropdown && (
         <TouchableOpacity
           style={styles.backdrop}
@@ -286,6 +307,7 @@ const ExercisesScreen = () => {
 
 export default ExercisesScreen;
 
+// Styles define how everything looks
 const styles = StyleSheet.create({
   container: {
     flex: 1,

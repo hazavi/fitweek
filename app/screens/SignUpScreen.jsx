@@ -1,39 +1,44 @@
 import React, { useState, useContext } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { account, ID } from '../config/appwrite';
 import { AuthContext } from '../index';
 import { Ionicons } from '@expo/vector-icons';
+import { authService } from '../services/authService';
 
 /**
- * SignUpScreen - Allows new users to create an account
- * Collects name, email, and password
+ * SignUpScreen - User registration component
+ * Collects user information and creates new accounts
  */
 const SignUpScreen = () => {
-  // State variables to manage form inputs and UI state
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // Controls password visibility
+  // Form state management
+  const [name, setName] = useState('');          // User's full name
+  const [email, setEmail] = useState('');        // User's email address
+  const [password, setPassword] = useState('');  // User's password
+  const [loading, setLoading] = useState(false); // Controls loading indicator
+  const [showPassword, setShowPassword] = useState(false); // Toggles password visibility
   
   const navigation = useNavigation();
   const { refreshAuth } = useContext(AuthContext);
   
-  // Toggle password visibility (show/hide)
+  /**
+   * Toggles password field between visible and hidden
+   */
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
   
-  // Handle the sign up action
+  /**
+   * Handles user registration with form validation
+   * Connects to Appwrite backend via authService
+   */
   const handleSignUp = async () => {
-    // Validate all fields are filled
+    // Input validation for required fields
     if (!name || !email || !password) {
       alert('Please fill in all fields');
       return;
     }
     
-    // Check password meets minimum requirements
+    // Password strength validation
     if (password.length < 8) {
       alert('Password must be at least 8 characters');
       return;
@@ -44,17 +49,12 @@ const SignUpScreen = () => {
     try {
       console.log("Creating user account...");
       
-      // Create user account using Appwrite
-      const user = await account.create(
-        ID.unique(),  // Generate a unique ID
-        email,
-        password,
-        name
-      );
+      // Create account in Appwrite through authService
+      const user = await authService.register(email, password, name);
       
       console.log('User created successfully', user);
       
-      // Show success alert and navigate to login
+      // Success notification and navigation to login
       Alert.alert(
         "Account Created",
         "Your account has been created successfully. Please login with your credentials.",
@@ -66,23 +66,23 @@ const SignUpScreen = () => {
         ]
       );
       
-      // Clear form fields
+      // Reset form fields after successful registration
       setName('');
       setEmail('');
       setPassword('');
       
     } catch (error) {
-      // Handle any errors during sign up
+      // Error handling with user feedback
       console.error('Sign up error', error);
       Alert.alert('Sign Up Failed', error.message || 'Unknown error occurred');
     } finally {
-      setLoading(false);  // Always stop loading indicator
+      setLoading(false);
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Back button */}
+      {/* Navigation back button */}
       <TouchableOpacity 
         style={styles.backButton}
         onPress={() => navigation.goBack()}
@@ -91,10 +91,9 @@ const SignUpScreen = () => {
       </TouchableOpacity>
 
       <View style={styles.content}>
-        {/* Screen title */}
         <Text style={styles.title}>Sign Up</Text>
         
-        {/* Name input field */}
+        {/* User input fields with appropriate keyboard types */}
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Name</Text>
           <TextInput
@@ -105,7 +104,6 @@ const SignUpScreen = () => {
           />
         </View>
 
-        {/* Email input field */}
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Email</Text>
           <TextInput
@@ -118,14 +116,13 @@ const SignUpScreen = () => {
           />
         </View>
 
-        {/* Password input field with toggle visibility */}
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Password</Text>
           <View style={styles.passwordContainer}>
             <TextInput
               style={styles.passwordInput}
               placeholder="********"
-              secureTextEntry={!showPassword} // Toggle visibility based on state
+              secureTextEntry={!showPassword}
               value={password}
               onChangeText={setPassword}
             />
@@ -142,7 +139,7 @@ const SignUpScreen = () => {
           </View>
         </View>
 
-        {/* Register button - shows loading indicator when processing */}
+        {/* Submit button with loading state */}
         <TouchableOpacity 
           style={styles.registerButton}
           onPress={handleSignUp}

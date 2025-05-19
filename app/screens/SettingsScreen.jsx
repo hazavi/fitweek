@@ -1,21 +1,30 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { authService } from '../services/authService'; 
 
 /**
- * SettingsScreen - Displays user settings and logout options
- * Contains different configuration options and account management
+ * SettingsScreen - User settings and configuration
+ * Provides app preferences and account management options
  */
 const SettingsScreen = ({ logout }) => {
   /**
-   * Handle user logout
-   * Calls the logout function passed from RootNavigator
+   * Handles user logout with error tolerance
+   * Uses a nested try/catch for graceful failure handling
    */
   const handleLogout = async () => {
     try {
-      // Call the logout function passed from RootNavigator
+      try {
+        // Attempt backend logout first
+        await authService.logout();
+      } catch (serviceError) {
+        // Continue even if backend logout fails (expired session, network issues)
+        console.log('AuthService logout error:', serviceError.message);
+      }
+      
+      // Always update app authentication state
       await logout();
-      // No need for navigation here, the RootNavigator will handle it
+      
     } catch (error) {
       console.error('Logout error:', error);
       Alert.alert('Error', 'Failed to logout. Please try again.');
@@ -26,15 +35,15 @@ const SettingsScreen = ({ logout }) => {
     <View style={styles.container}>
       <Text style={styles.title}>Settings</Text>
 
-      {/* Settings Menu Items */}
+      {/* Settings menu with various configuration options */}
       <View style={styles.menuContainer}>
-        {/* Profile Option */}
+        {/* Profile settings option */}
         <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Profile', 'Profile settings coming soon!')}>
           <Ionicons name="person-outline" size={24} color="black" />
           <Text style={styles.menuText}>Profile</Text>
         </TouchableOpacity>
 
-        {/* Themes Option - Toggle between light and dark mode */}
+        {/* Theme selection option */}
         <TouchableOpacity 
           style={styles.menuItem} 
           onPress={() => Alert.alert('Themes', 'Theme settings coming soon!')}
@@ -48,7 +57,7 @@ const SettingsScreen = ({ logout }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Logout Button */}
+      {/* Logout action button */}
       <TouchableOpacity 
         style={styles.logoutButton} 
         onPress={handleLogout}
@@ -63,6 +72,10 @@ const SettingsScreen = ({ logout }) => {
 export default SettingsScreen;
 
 
+/**
+ * Component styles
+ * Defines visual appearance including layout, colors, and spacing
+ */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -89,7 +102,6 @@ const styles = StyleSheet.create({
     marginLeft: 15,
     flex: 1,
   },
-  // New styles for theme selection UI
   themeSelectionContainer: {
     flexDirection: 'row',
     alignItems: 'center',

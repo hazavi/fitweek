@@ -1,65 +1,83 @@
 import React, { useState, useContext } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, SafeAreaView, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { AuthContext } from '../index'; // Import the auth context
+import { AuthContext } from '../index';
 import { Ionicons } from '@expo/vector-icons';
+import { authService } from '../services/authService'; // Import authService
 
 /**
- * LoginScreen - Handles user authentication
- * Allows users to log in to their account with email and password
+ * LoginScreen - Where users log into their accounts
+ * Handles email/password login and error messages
  */
 const LoginScreen = () => {
-  // State variables for form fields and UI
-  const [email, setEmail] = useState('');          // User's email
-  const [password, setPassword] = useState('');    // User's password
-  const [loading, setLoading] = useState(false);   // Loading state for API calls
-  const [showPassword, setShowPassword] = useState(false); // Controls password visibility
+  // Store what the user types and UI states
+  const [email, setEmail] = useState('');          // Where user types email
+  const [password, setPassword] = useState('');    // Where user types password
+  const [loading, setLoading] = useState(false);   // Shows spinner while logging in
+  const [showPassword, setShowPassword] = useState(false); // Controls if password is visible
   
   const navigation = useNavigation();
   
-  // Get login function from the authentication context
-  const { login } = useContext(AuthContext);
+  // Get login functions from main app
+  const { login, refreshAuth } = useContext(AuthContext);
   
   /**
-   * Toggle password visibility between hidden and visible
+   * Switches between showing and hiding password text
    */
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
   
   /**
-   * Handle login form submission
+   * Handles the login button press
+   * Checks inputs, calls the auth service, and shows errors if needed
    */
   const handleLogin = async () => {
-    // Validate inputs
+    // Make sure email and password are filled in
     if (!email || !password) {
-      alert('Please enter both email and password');
+      Alert.alert('Error', 'Please enter both email and password');
       return;
     }
     
+    // Show loading spinner
     setLoading(true);
     
     try {
-      // Call login function from AuthContext
-      const success = await login(email, password);
+      // First check if user is already logged in
+      const hasSession = await authService.hasActiveSession();
       
-      // Show error if login failed
-      if (!success) {
-        alert('Login failed. Please check your credentials and try again.');
+      if (hasSession) {
+        console.log('Already logged in, refreshing app state');
+        // Just update the app state
+        await refreshAuth();
+      } else {
+        // Try to log in with the entered email and password
+        await authService.login(email, password);
+        
+        // Update the app to show logged-in screens
+        await login();
       }
-      // No need to navigate - the root navigator will handle it based on isLoggedIn state
+      
+      console.log('Login successful');
     } catch (error) {
-      // Handle any errors during login
-      console.error('Login error:', error);
-      alert('Login failed: ' + (error.message || 'Unknown error occurred'));
+      // Show different error messages based on what went wrong
+      if (error.code === 429) {
+        Alert.alert('Too Many Attempts', 'Please try again later');
+      } else if (error.code === 401) {
+        Alert.alert('Login Failed', 'Wrong email or password');
+      } else {
+        console.error('Login error:', error);
+        Alert.alert('Login Failed', error.message || 'Something went wrong');
+      }
     } finally {
-      setLoading(false); // Always stop loading indicator
+      // Hide the loading spinner
+      setLoading(false);
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Back button to return to welcome screen */}
+      {/* Back button to go to welcome screen */}
       <TouchableOpacity 
         style={styles.backButton}
         onPress={() => navigation.goBack()}
@@ -68,10 +86,10 @@ const LoginScreen = () => {
       </TouchableOpacity>
 
       <View style={styles.content}>
-        {/* Screen title */}
+        {/* Page title */}
         <Text style={styles.title}>Login</Text>
         
-        {/* Email input field */}
+        {/* Email input box */}
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Email</Text>
           <TextInput
@@ -84,14 +102,14 @@ const LoginScreen = () => {
           />
         </View>
 
-        {/* Password input field with visibility toggle */}
+        {/* Password input box with eye button */}
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Password</Text>
           <View style={styles.passwordContainer}>
             <TextInput
               style={styles.passwordInput}
               placeholder="********"
-              secureTextEntry={!showPassword} // Toggle based on state
+              secureTextEntry={!showPassword} // Hide text if showPassword is false
               value={password}
               onChangeText={setPassword}
             />
@@ -108,7 +126,7 @@ const LoginScreen = () => {
           </View>
         </View>
 
-        {/* Login button - shows loading spinner when processing */}
+        {/* Login button - shows spinner when working */}
         <TouchableOpacity 
           style={styles.loginButton}
           onPress={handleLogin}
@@ -121,7 +139,7 @@ const LoginScreen = () => {
           )}
         </TouchableOpacity>
 
-        {/* Forgot password link */}
+        {/* Password reset option */}
         <TouchableOpacity
           onPress={() => alert('Password reset feature would go here')}
         >

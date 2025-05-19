@@ -2,7 +2,7 @@ import React, { useEffect, useState, createContext } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StyleSheet, ActivityIndicator, View, Alert } from 'react-native';
-import { account } from './config/appwrite';
+import authService from './services/authService'; // Authentication service for login/logout
 import FloatingTabBar from './components/FloatingTabBar';
 
 // Import all screens needed for the app
@@ -17,40 +17,34 @@ import WeekdayDetailsScreen from './screens/WeekdayDetailsScreen';
 import AddExerciseScreen from './screens/AddExerciseScreen';
 import ExecuteWorkoutScreen from './screens/ExecuteWorkoutScreen';
 
-// Create navigators - these help manage screen transitions and tab navigation
-const Tab = createBottomTabNavigator();  // For bottom tabs like Workout, Exercises, Settings
-const Stack = createStackNavigator();    // For screen-to-screen navigation (like pushing new screens)
+// Create navigators for app routing
+const Tab = createBottomTabNavigator();  // Bottom tabs for main app sections
+const Stack = createStackNavigator();    // Stack for screen-to-screen navigation
 
-// Create a context to share auth data - this lets any component access login state
-// without passing props through every component in between
+// Auth context provides login state across the app without prop drilling
 export const AuthContext = createContext();
 
 /**
- * MainNavigator - Sets up the tab navigation structure for the logged-in experience
- * This appears after successful login and contains all the main app screens
+ * MainNavigator - Tab navigation for authenticated users
+ * Contains all main app features organized in tabs with custom styling
  */
 const MainNavigator = ({ logout }) => {
   return (
-    // Setup the tab navigator with our custom floating tab bar
     <Tab.Navigator
-      tabBar={props => <FloatingTabBar {...props} />}
+      tabBar={props => <FloatingTabBar {...props} />} // Custom floating tab bar component
       screenOptions={{
-        headerShown: false,  // Hide the default header
-        tabBarShowLabel: false,  // Don't show text labels (we add these in our custom tab bar)
+        headerShown: false,  // Hide default headers
         tabBarStyle: { 
-          position: 'absolute',  // Position absolute for floating effect
-          elevation: 0,  // Remove default Android elevation
-          backgroundColor: 'transparent',  // Transparent background
-          borderTopWidth: 0,  // Remove default border
-          height: 0,  // No height (our custom component handles this)
+          position: 'absolute',
+          backgroundColor: 'transparent',
+          borderTopWidth: 0,
+          height: 0, // Custom tab bar handles sizing
         },
-        safeAreaInsets: { bottom: 0 }  // Handle safe area manually
       }}
     >
-      {/* Workout Tab - This is the first tab for workout planning */}
+      {/* Workout Tab with nested stack for related screens */}
       <Tab.Screen name="Workout">
         {() => (
-          // Nested stack navigator for workout-related screens
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="WorkoutHome" component={WorkoutScreen} />
             <Stack.Screen name="WeekdayDetails" component={WeekdayDetailsScreen} />
@@ -82,8 +76,8 @@ const MainNavigator = ({ logout }) => {
 };
 
 /**
- * AuthNavigator - Handles the authentication flow (welcome, login, signup)
- * This appears when the user is not logged in
+ * AuthNavigator - Handles pre-login screens
+ * Manages welcome, login and registration flow
  */
 const AuthNavigator = () => {
   return (
@@ -96,87 +90,88 @@ const AuthNavigator = () => {
 };
 
 /**
- * RootNavigator - The main component that manages authentication state
- * and decides whether to show login screens or the main app
+ * RootNavigator - Main component controlling app navigation
+ * Determines whether to show auth screens or main app based on login state
+ * Provides authentication functions to all child components
  */
 const RootNavigator = () => {
-  // State variables to track authentication and loading status
-  const [isLoggedIn, setIsLoggedIn] = useState(false);  // Is user logged in?
-  const [isLoading, setIsLoading] = useState(true);     // Are we checking auth status?
+  const [isLoggedIn, setIsLoggedIn] = useState(false);  // Tracks authentication state
+  const [isLoading, setIsLoading] = useState(true);     // Controls initial loading screen
   
   /**
-   * Check if the user is already logged in by fetching their account
-   * This runs when the app starts to restore the session if possible
+   * Checks if user has an active session on app startup
+   * Automatically logs in users with valid sessions
+   * @returns {Promise<boolean>} True if user is logged in
    */
   const checkAuthStatus = async () => {
     try {
-      // Try to get the current user - if successful, they're logged in
-      const user = await account.get();
-      console.log('User is logged in', user);
-      setIsLoggedIn(true);
-      return true;
+      const user = await authService.getCurrentUser();
+      if (user) {
+        console.log('User is logged in', user);
+        setIsLoggedIn(true);
+        return true;
+      } else {
+        console.log('User is not logged in');
+        setIsLoggedIn(false);
+        return false;
+      }
     } catch (error) {
-      // If this fails, the user isn't logged in (or session expired)
-      console.log('User is not logged in', error);
+      console.log('Auth check failed', error);
       setIsLoggedIn(false);
       return false;
     } finally {
-      // Either way, we're done checking - stop showing the loading spinner
-      setIsLoading(false);
+      setIsLoading(false); // Stop loading indicator regardless of outcome
     }
   };
   
   /**
-   * Handle user login with email and password
-   * Returns true on success, false on failure
+   * Updates app state after successful login via AuthContext
+   * Called from LoginScreen after authentication succeeds
+   * @returns {Promise<boolean>} True if login successful
    */
-  const handleLogin = async (email, password) => {
+  const handleLogin = async () => {
     try {
-      // First, try to delete any existing session (clean slate approach)
-      try {
-        await account.deleteSession('current');
-      } catch (e) {
-        // It's okay if this fails - just means there was no session to delete
+      const user = await authService.getCurrentUser();
+      if (user) {
+        setIsLoggedIn(true);
+        return true;
       }
-      
-      // Create a new session with the provided credentials
-      await account.createEmailSession(email, password);
-      
-      // Verify the login worked by checking auth status again
-      await checkAuthStatus();
-      return true;  // Login successful
+      return false;
     } catch (error) {
-      // Something went wrong during login
-      console.error('Login error:', error);
-      return false;  // Login failed
+      console.error('Login state error:', error);
+      return false;
     }
   };
   
   /**
-   * Handle user logout by deleting their current session
+   * Handles user logout process
+   * Attempts service logout first, then updates app state
+   * @returns {Promise<boolean>} True if logout successful
    */
   const handleLogout = async () => {
     try {
-      // Delete the current session from Appwrite
-      await account.deleteSession('current');
-      // Update our local state to reflect logged out status
+      try {
+        await authService.logout(); // Try service logout first
+      } catch (error) {
+        // If service logout fails, continue with local state update
+        console.log('Logout API error:', error.message);
+      }
+      
+      // Always update local state regardless of service success
       setIsLoggedIn(false);
-      console.log('Logout successful');
       return true;
     } catch (error) {
-      // Something went wrong during logout
-      console.error('Logout error:', error);
       Alert.alert('Error', 'Failed to logout. Please try again.');
       return false;
     }
   };
   
-  // Check auth status when app starts - this is like an "auto-login" feature
+  // Check auth status on app start
   useEffect(() => {
     checkAuthStatus();
   }, []);
   
-  // Show a loading spinner while checking if the user is logged in
+  // Show loading screen while checking auth
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -185,23 +180,18 @@ const RootNavigator = () => {
     );
   }
   
-  // Package up all auth-related functions and state to share with components
+  // Auth context shared across the app
   const authContext = {
-    isLoggedIn,                  // Current login status
-    login: handleLogin,          // Function to log in
-    logout: handleLogout,        // Function to log out
-    refreshAuth: checkAuthStatus // Function to refresh auth state
+    isLoggedIn,
+    login: handleLogin,
+    logout: handleLogout,
+    refreshAuth: checkAuthStatus
   };
   
   return (
-    // Provide auth context to all child components
     <AuthContext.Provider value={authContext}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {/* 
-          Conditional rendering based on login status:
-          - If logged in, show main app tabs
-          - If not logged in, show auth screens
-        */}
+        {/* Conditional navigation based on auth state */}
         {isLoggedIn ? (
           <Stack.Screen name="AppTabs">
             {props => <MainNavigator {...props} logout={handleLogout} />}

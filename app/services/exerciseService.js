@@ -1,9 +1,9 @@
 import { databases, storage, Query } from '../config/appwrite';
 
 // Replace these with your actual Appwrite IDs
-const DATABASE_ID = '68245462000b0afba9b0';           // e.g., 'default'
-const EXERCISES_COLLECTION_ID = '6824554f00317609257b';      // e.g., 'exercises'
-const THUMBNAILS_BUCKET_ID = '682459e1003203ddefce'; // e.g., 'exercise-thumbnails'
+const DATABASE_ID = '68245462000b0afba9b0';           
+const EXERCISES_COLLECTION_ID = '6824554f00317609257b';      
+const THUMBNAILS_BUCKET_ID = '682459e1003203ddefce'; 
 
 export const exerciseService = {
   // Get all exercises
