@@ -1,54 +1,54 @@
 # FitWeek
 
-FitWeek is a comprehensive workout planning and tracking application built with React Native and Appwrite backend.
+**FitWeek** is a workout planning and tracking app built with **React Native** and **Appwrite** backend.
 
-## Features
+## Preview
 
-- **Weekly Workout Planning**: Plan your workouts for each day of the week
-- **Exercise Library**: Browse a collection of exercises with detailed instructions
-- **Set Tracking**: Configure and track sets, reps, and weights for each exercise
-- **Progress Tracking**: Check off exercises and sets as you complete them
-- **User Authentication**: Secure login and account management
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/17bad91e-26dd-441f-a2b0-d4489744a259" width="180" />
+  <img src="https://github.com/user-attachments/assets/915a6bf5-43e5-4ec7-8b57-639d32756ab4" width="180"/>
+  <img src="https://github.com/user-attachments/assets/6967cf22-90a3-4f48-974e-a8717db1a2a0" width="180"/>
+  <img src="https://github.com/user-attachments/assets/325d03fc-26c3-4616-a9a8-0d01b7f51fe3" width="180"/>
+</p>
 
-## Technologies Used
+---
 
-- **Frontend**: React Native + Expo
-- **Backend**: Appwrite (Authentication, Database, Storage)
-- **Navigation**: React Navigation with custom tab bar
-- **UI Components**: Custom React Native components with Ionicons
+## 🚀 Features
 
-## Project Structure
+* 🗓️ **Weekly Workout Planning** – Organize your workouts by day
+* 📚 **Exercise Library** – Browse detailed exercises with guidance
+* 🏋️ **Set Tracking** – Track sets, reps, and weights easily
+* 📈 **Progress Monitoring** – Mark completed sets as you go
+* 🔐 **Secure Authentication** – User login and account management
 
-- **app/screens/**: All application screens
-- **app/components/**: Reusable UI components
-- **app/services/**: API service layers for data fetching
-- **app/config/**: Configuration files (Appwrite setup)
+---
 
-## App Flow
+## 🛠️ Technologies Used
 
-1. **Authentication**: Users start at the welcome screen to login or signup
-2. **Main Tabs**: After login, users can navigate between:
-   - **Workout**: Weekly workout planning and execution
-   - **Exercises**: Browse exercise library with filtering
-   - **Settings**: Account management and preferences
+* ⚛️ **React Native** + **Expo**
+* 🧰 **Appwrite** (Auth, DB, Storage)
+* 🧭 **React Navigation** – With custom tab bar
+* 🎨 **Ionicons** + custom components for smooth UI
 
-## Getting Started
+---
 
-1. Clone the repository
-2. Install dependencies: `npm install` or `yarn install`
-3. Create an Appwrite project and update `app/config/appwrite.js` with your project details
-4. Start the application: `npm start` or `yarn start`
+## 🗂️ Project Structure
 
-## Screenshots
+```
+app/
+├── screens/       # All screen components
+├── components/    # Reusable UI components
+├── services/      # API service logic
+└── config/        # Appwrite setup & configs
+```
 
-- Login/Signup screens
-- Weekly workout planner
-- Exercise details
-- Workout execution tracking
+---
 
-## Future Enhancements
 
-- Theme customization (Dark/Light mode)
-- Exercise history and statistics
-- Social features for sharing workouts
+## 🌟 Future Enhancements
+
+* 🌙 Dark/Light mode themes
+* 📊 Exercise history + stats
+* 🤝 Social sharing features
+
 
